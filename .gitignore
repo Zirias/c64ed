@@ -1,0 +1,9 @@
+.*.swp
+*.lbl
+*.map
+*.prg
+*.bas
+*.exe
+mprg2bas
+obj/
+
