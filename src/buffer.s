@@ -56,7 +56,7 @@ ld_x            = *+1
                 dex
                 stx     ld_x2
                 cpx     V_Y
-                beq     ld_currline
+                bpl     ld_currline
                 lda     #>cpl_src
                 ldy     #<cpl_src
                 jsr     linepointer

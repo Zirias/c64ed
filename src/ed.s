@@ -24,7 +24,6 @@
                 stx     V_Y
                 dex
                 stx     buffer
-                stx     buffer+1
                 stx     V_R
 
 .segment "MAIN"
@@ -113,7 +112,10 @@ cmd_l:
                 ldx     V_Y
                 jsr     printline
                 jmp     mainloop
+
 cmd_p:
+                jmp     cp
+
 cmd_A:          
                 ldx     V_R
                 inx
@@ -131,17 +133,78 @@ cmd_A:
                 jmp     mainloop
 
 cmd_i:
+                jmp     ci
+
 cmd_r:
+                jmp     cr
+
 cmd_I:
                 jsr     insertat
                 jmp     mainloop
 
 cmd_d:
+                jmp     cd
+
 cmd_j:
                 jsr     linesup
-                jmp     mainloop
+jmpmain:        jmp     mainloop
+
+cp:
+                ldx     V_R
+                beq     jmpmain
+                ldx     #1
+                stx     V_I
+                dex
+                stx     V_J
+                ldx     #2
+                lda     arglen
+                beq     cp_noargs
+                jsr     getij
+cp_noargs:      lda     V_I
+                ldx     V_R
+                jsr     adjustrange
+                cmp     #$ff
+                bne     cp_havestart
+                lda     #1
+cp_havestart:   sta     V_I
+                ldx     V_R
+                lda     V_J
+                cmp     #$ff
+                bne     cp_haveend
+                lda     #0
+cp_haveend:     jsr     adjustrange
+                sta     cp_cmpx
+                ldx     V_I
+cp_loop:        jsr     printline
+                ldx     V_I
+cp_cmpx         = *+1
+                cpx     #$ff
+                beq     jmpmain
+                inx
+                stx     V_I
+                bne     cp_loop
+
+cd:
+                ldy     #0
+                lda     (V_LP),y
+                bne     cd_clearline
+                lda     V_Y
+                cmp     V_R
+                bne     cd_linesup
+                dec     V_Y
+                iny
+                sty     V_X
+cd_linesup:     jsr     linesup
+cd_main:        jmp     mainloop
+cd_clearline:   tya
+                sta     (V_LP),y
+                iny
+                sty     V_X
+                bne     cd_main
 
 cL:
+                ldx     V_R
+                beq     jmpmain2
                 ldx     V_Y
                 ldy     #3
                 dex
@@ -179,6 +242,31 @@ cL_colloop:     jsr     CHROUT
                 jsr     CHROUT
                 lda     #$d
                 jsr     CHROUT
+jmpmain2:       jmp     mainloop
+
+ci:
+                jsr     linesdown
+                dec     V_Y
+                ldy     #0
+                lda     (V_LP),y
+                sta     V_X
+                inc     V_X
+                jsr     insertat
+                inc     V_Y
+                ldx     #1
+                stx     V_X
+                jmp     mainloop
+
+cr:
+                ldy     #0
+                ldx     V_X
+                dex
+                txa
+                sta     (V_LP),y
+                jsr     insertat
+                inc     V_Y
+                ldx     #1
+                stx     V_X
                 jmp     mainloop
 
 printline:
