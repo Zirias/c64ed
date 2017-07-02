@@ -14,7 +14,7 @@ else
 EXE:=
 endif
 
-ed_OBJS:=$(addprefix obj/,ed.o buffer.o numconv.o)
+ed_OBJS:=$(addprefix obj/,ed.o buffer.o cmdline.o numconv.o)
 ed_BIN:=ed.prg
 
 mprg2bas_OBJS:=$(addprefix obj/,mprg2bas.o)
