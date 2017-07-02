@@ -56,7 +56,8 @@ ld_x            = *+1
                 dex
                 stx     ld_x2
                 cpx     V_Y
-                bpl     ld_currline
+                beq     ld_currline
+                bmi     ld_currline
                 lda     #>cpl_src
                 ldy     #<cpl_src
                 jsr     linepointer
@@ -95,9 +96,11 @@ ld_tgt          = *+1
 ld_emptyline:   ldx     #1
                 stx     V_X
                 ldx     V_Y
+		cpx	V_R
+		beq	ld_done
                 inx
                 stx     V_Y
-                rts
+ld_done:        rts
 
 linesup:
                 ldx     V_Y
