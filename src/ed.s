@@ -1,6 +1,8 @@
 .include "defs.inc"
 
 .import linepointer
+.import linesdown
+.import linesup
 .import buffer
 
 .import prompt
@@ -91,6 +93,8 @@ pl_xpos:        jsr     adjustrange
                 bpl     mainloop
 
 cmd_enter:
+                jsr     linesdown
+                jmp     mainloop
 
 cmd_e:
                 lda     #0
@@ -129,6 +133,9 @@ cmd_A:
 cmd_i:
 cmd_r:
 cmd_I:
+                jsr     insertat
+                jmp     mainloop
+
 cmd_d:
 cmd_j:
                 jmp     mainloop
@@ -199,6 +206,7 @@ pl_cmp          = *+1
 
 insertat:
                 lda     V_LP
+                clc
                 adc     V_X
                 sta     ia_mvsrcbase
                 sta     ia_instgtbase
