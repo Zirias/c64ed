@@ -143,7 +143,7 @@ pl_cntplus:     stx     arglen
                 ldx     #0
                 jsr     getijabs
                 lda     V_I
-                ldx     V_R
+pl_pos:         ldx     V_R
                 jsr     adjustrange
                 cmp     #$ff
                 beq     pl_noypos
@@ -152,18 +152,30 @@ pl_cntplus:     stx     arglen
                 lda     #0
                 ldy     #V_LP
                 jsr     linepointer
-pl_noypos:      lda     (V_LP),y
+pl_noypos:      ldy	#0
+		lda     (V_LP),y
                 tax
+		inx
                 lda     V_J
-                jsr     adjustrange
                 cmp     #$ff
-                beq     pl_noxpos
+                bne     pl_xpos
+		lda	V_X
+pl_xpos:        jsr     adjustrange
                 sta     V_X
-pl_noxpos:      jmp     mainloop
+		jmp     mainloop
 
 cmd_enter:
+
 cmd_e:
+		lda	#0
+		sta	V_J
+		beq	pl_pos
+
 cmd_b:
+		lda	#1
+		sta	V_J
+		bne	pl_pos
+
 cmd_L:
 cmd_l:
 cmd_p:
