@@ -8,7 +8,7 @@
 .import buffer
 
 V_C             = $02
-V_MASK_PRINT	= $15
+V_MASK_PRINT    = $15
 V_CURSOR        = $cc   ; cursor on/off
 V_I             = $22
 V_J             = $23
@@ -148,6 +148,7 @@ pl_cntplus:     stx     arglen
                 cmp     #$ff
                 beq     pl_noypos
                 sta     V_Y
+		tax
                 lda     #0
                 ldy     #V_LP
                 jsr     linepointer
@@ -166,12 +167,76 @@ cmd_b:
 cmd_L:
 cmd_l:
 cmd_p:
-cmd_A:
+cmd_A:          jmp     appendline
 cmd_i:
 cmd_r:
 cmd_I:
 cmd_d:
 cmd_j:
+
+appendline:
+                ldx     V_R
+                inx
+                stx     V_R
+                stx     V_Y
+                lda     #0
+                ldy     #V_LP
+                jsr     linepointer
+		lda	#0
+		tay
+		sta	(V_LP),y
+		iny
+		sty	V_X
+		jsr	insertat
+                jmp     mainloop
+
+insertat:
+		lda	V_LP
+		adc	V_X
+		sta	ia_mvsrcbase
+		sta	ia_instgtbase
+		lda	V_LP+1
+		adc	#0
+		sta	ia_mvsrcbase+1
+		sta	ia_instgtbase+1
+		lda	ia_mvsrcbase
+		adc	arglen
+		sta	ia_mvdstbase
+		lda	ia_mvsrcbase+1
+		adc	#0
+		sta	ia_mvdstbase+1
+		ldy	#0
+		lda	(V_LP),y
+		sec
+		sbc	V_X
+		bmi	ia_nomove
+		tax
+		clc
+ia_mvsrcbase	= *+1
+ia_moveloop:	lda	$ffff,x
+ia_mvdstbase	= *+1
+		sta	$ffff,x
+		dex
+		bpl	ia_moveloop
+ia_nomove:	ldx	arglen
+		dex
+		bpl	ia_insert
+		rts
+ia_insert:	lda	line+2,x
+ia_instgtbase	= *+1
+		sta	$ffff,x
+		dex
+		bpl	ia_insert
+		ldy	#0
+		lda	(V_LP),y
+		clc
+		adc	arglen
+		sta	(V_LP),y
+		lda	V_X
+		sec
+		adc	arglen
+		sta	V_X
+		rts
 
 getij:
                 stx     gij_off
