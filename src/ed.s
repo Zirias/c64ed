@@ -138,6 +138,7 @@ cmd_I:
 
 cmd_d:
 cmd_j:
+                jsr     linesup
                 jmp     mainloop
 
 cL:
@@ -191,6 +192,7 @@ printline:
                 stx     pl_read+1
 pl_base         = *+1
                 ldx     $ffff
+                beq     pl_empty
                 stx     pl_cmp
                 ldy     #0
 pl_read         = *+1
@@ -200,7 +202,7 @@ pl_loop:        lda     $ffff,y
 pl_cmp          = *+1
                 cpy     #$ff
                 bne     pl_loop
-                lda     #$d
+pl_empty:       lda     #$d
                 jmp     CHROUT
                 ; rts
 

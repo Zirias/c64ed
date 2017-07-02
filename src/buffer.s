@@ -83,6 +83,7 @@ ld_currline:    lda     cpl_dst
                 tax
 ld_cols         = *+1
                 stx     $ffff
+                beq     ld_emptyline
 ld_y            = *+1
                 ldy     #$ff
 ld_lineloop:    lda     (V_LP),y
@@ -91,7 +92,7 @@ ld_tgt          = *+1
                 dey
                 dex
                 bne     ld_lineloop
-                inx
+ld_emptyline:   ldx     #1
                 stx     V_X
                 ldx     V_Y
                 inx
@@ -99,6 +100,55 @@ ld_tgt          = *+1
                 rts
 
 linesup:
+                ldx     V_Y
+                cpx     V_R
+                beq     lu_done
+                inx
+                lda     #>lu_src
+                ldy     #<lu_src
+                jsr     linepointer
+                lda     lu_src
+                sta     lu_srccols
+                lda     lu_src+1
+                sta     lu_srccols+1
+                ldy     #0
+                lda     (V_LP),y
+lu_srccols      = *+1
+                ldx     $ffff
+                beq     lu_emptyline
+                stx     lu_x
+                clc
+lu_x            = *+1
+                adc     #$ff
+                sta     (V_LP),y
+                tay
+lu_src          = *+1
+lu_lineloop:    lda     $ffff,x
+                sta     (V_LP),y
+                dey
+                dex
+                bne     lu_lineloop
+lu_emptyline:   ldx     V_Y
+                inx
+lu_loop:        cpx     V_R
+                beq     lu_decrows
+                stx     lu_x2
+                lda     #>cpl_dst
+                ldy     #<cpl_dst
+                jsr     linepointer
+lu_x2           = *+1
+                ldx     #$ff
+                inx
+                stx     lu_x3
+                lda     #>cpl_src
+                ldy     #<cpl_src
+                jsr     linepointer
+                jsr     copyline
+lu_x3           = *+1
+                ldx     #$ff
+                bne     lu_loop
+lu_decrows:     dec     V_R
+lu_done:        rts
 
 copyline:
                 lda     cpl_src
