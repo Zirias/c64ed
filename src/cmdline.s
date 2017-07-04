@@ -15,18 +15,12 @@
 .exportzp V_J
 
 .segment "ZP": zeropage
-V_MASK_PRINT:	.res	1
 V_C:		.res	1
 V_I:		.res	1
 V_J:		.res	1
 V_OFF_I:	.res	1
 V_OFF_J:	.res	1
 GIJ_OFF:	.res	1
-
-.segment "INIT"
-
-                ldx     #$60
-                stx     V_MASK_PRINT
 
 .code
 
@@ -61,9 +55,8 @@ readline:
                 ldx     #0
                 stx     V_C
 readinput:      jsr     kb_in
-                beq     readinput
-                bit     V_MASK_PRINT
-                beq     ctrlinput
+                bcs     readinput
+                bvs     ctrlinput
                 ldx     V_C
                 cpx     #$50
                 beq     readinput

@@ -22,12 +22,8 @@
 ;
 ; call kb_check periodically (e.g. from raster IRQ) to poll keyboard
 ; call kb_get to get next buffered scancode (carry indicates empty buffer)
-; call kb_peek to know if there are scancodes waiting
-; call kb_clear to empty scancode buffer
 
 .export kb_get
-.export kb_peek
-.export kb_clear
 .export kb_check
 
 .segment "ZP": zeropage
@@ -60,17 +56,6 @@ kb_get:
 kbg_done:       stx     bufrd
                 clc
 kbg_out:        rts
-
-kb_peek:
-                clc
-                lda     bufrd
-                sbc     bufwr
-                rts
-
-kb_clear:
-                lda     bufwr
-                sta     bufrd
-                rts
 
 kb_check:
                 lda     #0
