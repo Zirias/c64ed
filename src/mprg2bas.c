@@ -1,12 +1,23 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#ifdef _WIN32
+# include <io.h>
+# include <fcntl.h>
+# define SET_BINARY_MODE(stream) setmode(fileno(stream), O_BINARY)
+#else
+# define SET_BINARY_MODE(stream) ((void)0)
+#endif
+
 #define BUFSIZE 64*1024
 
 unsigned char buf[BUFSIZE];
 
 int main()
 {
+    SET_BINARY_MODE(stdin);
+    SET_BINARY_MODE(stdout);
+
     unsigned char addrbytes[2];
     uint16_t startaddress;
 
@@ -23,6 +34,18 @@ int main()
         fputs("Error: couldn't read any data\n", stderr);
         return 1;
     }
+
+    size_t rembuf = BUFSIZE;
+    unsigned char *bufptr = buf;
+    size_t nchunk = nread;
+    while (nchunk && nchunk < rembuf)
+    {
+        bufptr += nchunk;
+        rembuf -= nchunk;
+        nchunk = fread(bufptr, 1, rembuf, stdin);
+        nread += nchunk;
+    }
+
     uint16_t endaddress = startaddress + (uint16_t)nread - 1;
 
     printf("0fOa=%" PRIu16 "to%" PRIu16 ":rEb:pOa,b:nE:sY%" PRIu16,
