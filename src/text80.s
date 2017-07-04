@@ -1,22 +1,19 @@
 .include "kbctrlcodes.inc"
 .include "vic.inc"
+.include "vicconfig.inc"
 .include "raster.inc"
 
-.exportzp T80_DRAWPAGE
+.import font_topaz_80col_petscii_western
+
 .exportzp T80_ROW
 .exportzp T80_COL
-.exportzp T80_FONT_L
-.exportzp T80_FONT_H
 
 .export t80_putc
 .export t80_chrout
 
 .segment "ZP": zeropage
-T80_DRAWPAGE:   .res 1
 T80_ROW:        .res 1
 T80_COL:        .res 1
-T80_FONT_L:     .res 1
-T80_FONT_H:     .res 1
 PUTS_L:         .res 1
 PUTS_H:         .res 1
 CHAR_L:         .res 1
@@ -42,17 +39,16 @@ getcharaddr:
                 asl     a
                 rol     CHAR_H
                 sta     CHAR_L
-                lda     T80_FONT_L
+                lda     #<font_topaz_80col_petscii_western
                 clc
                 adc     CHAR_L
                 sta     CHAR_L
-                lda     T80_FONT_H
+                lda     #>font_topaz_80col_petscii_western
                 adc     CHAR_H
                 sta     CHAR_H
                 rts
 
 ; get address of screen position
-; in:   T80_DRAWPAGE    first page of graphics screen
 ; in:   T80_ROW         text row (0-24)
 ; in:   WCOL            text column (0-39)
 ; out:  PUTS_L          screen position address
@@ -72,7 +68,7 @@ getputaddr:
                 sta     PUTS_L
                 lda     PUTS_H
                 adc     T80_ROW
-                adc     T80_DRAWPAGE
+                adc     #(vic_bitmap >> 8)
                 sta     PUTS_H
                 lda     WCOL
                 asl     a
@@ -88,7 +84,7 @@ thispage2:      sta     PUTS_L
                 rts
 
 t80_scroll:
-                ldy     T80_DRAWPAGE
+                ldy     #(vic_bitmap >> 8)
                 sty     PUTS_H
                 iny
                 sty     CHAR_H
@@ -183,8 +179,6 @@ cp_nohb2:       sta     SPRITE_0_X
 
 ; put character on screen in 80col mode
 ; in:   a               character code (petscii)
-; in:   T80_FONT_L      address of 80col font to use
-; in:   T80_DRAWPAGE    first page of graphics screen
 ; in:   T80_ROW         text row (0-24)
 ; in:   T80_COL         text column (0-79)
 t80_putc:

@@ -7,9 +7,9 @@
 
 .segment "ZP": zeropage
 
-ARGLEN:		.res 1		; length of argument to command
-PL_BASE:	.res 2
-INST_BASE:	.res 2
+ARGLEN:         .res 1          ; length of argument to command
+PL_BASE:        .res 2
+INST_BASE:      .res 2
 
 .code
 
@@ -57,15 +57,17 @@ pl_cntplus:     stx     ARGLEN
                 beq     cmd_d
                 cmp     #'j'
                 beq     cmd_j
-		cmp	#'q'
-		bne	cmd_focus
-		rts
+                cmp     #'q'
+                bne     cmd_focus
+                rts
 
                 ; focus position command:
 cmd_focus:      ldx     #0
                 jsr     getijabs
                 lda     V_I
 pl_pos:         ldx     V_R
+                cpx     #0
+                beq     mainloop
                 jsr     adjustrange
                 cmp     #$ff
                 beq     pl_noypos
@@ -87,7 +89,7 @@ pl_xpos:        jsr     adjustrange
 
 cmd_enter:
                 jsr     linesdown
-                bpl     mainloop
+                bpl     jmpmain
 
 cmd_e:
                 lda     #0
@@ -105,10 +107,10 @@ cmd_L:
 cmd_l:
                 ldx     V_Y
                 jsr     printline
-                jmp     mainloop
+                bvc     jmpmain
 
 cmd_p:
-                jmp     cp
+                beq     cp
 
 cmd_A:          
                 ldx     V_R
@@ -123,20 +125,20 @@ cmd_A:
                 iny
                 sty     V_X
                 jsr     insertat
-                jmp     mainloop
+                bpl     jmpmain
 
 cmd_i:
-                jmp     ci
+                beq     ci
 
 cmd_r:
-                jmp     cr
+                beq     cr
 
 cmd_I:
                 jsr     insertat
-                jmp     mainloop
+                bpl     jmpmain
 
 cmd_d:
-                jmp     cd
+                beq     cd
 
 cmd_j:
                 jsr     linesup
@@ -177,8 +179,38 @@ cp_cmpx         = *+1
                 stx     V_I
                 bne     cp_loop
 
+ci:
+                jsr     linesdown
+                dec     V_Y
+                ldy     #0
+                lda     (V_LP),y
+                sta     V_X
+                inc     V_X
+                jsr     insertat
+                inc     V_Y
+                ldx     #1
+                stx     V_X
+                bne     jmpmain
+
+cr:
+                ldy     #0
+                ldx     V_X
+                dex
+                txa
+                sta     (V_LP),y
+                jsr     insertat
+                ldx     V_R
+                cpx     V_Y
+                beq     jmpmain2
+                inc     V_Y
+                ldx     #1
+                stx     V_X
+                bne     jmpmain2
+
 cd:
                 ldy     #0
+                cpy     V_R
+                beq     jmpmain2
                 lda     (V_LP),y
                 bne     cd_clearline
                 lda     V_Y
@@ -188,16 +220,16 @@ cd:
                 iny
                 sty     V_X
 cd_linesup:     jsr     linesup
-		ldy	#1
-		cpy	V_Y
-		bmi	cd_main
-		sty	V_Y
-cd_main:        jmp     mainloop
+                ldy     #1
+                cpy     V_Y
+                bmi     jmpmain2
+                sty     V_Y
+                bpl     jmpmain2
 cd_clearline:   tya
                 sta     (V_LP),y
                 iny
                 sty     V_X
-                bne     cd_main
+                bne     jmpmain2
 
 cL:
                 ldx     V_R
@@ -235,45 +267,20 @@ cL_colmark:     lda     #' '
 cL_colloop:     jsr     t80_chrout
                 dex
                 bne     cL_colloop
-                lda     #$26		; ^
+                lda     #$26            ; ^
                 jsr     t80_chrout
                 lda     #$d
                 jsr     t80_chrout
 jmpmain2:       jmp     mainloop
 
-ci:
-                jsr     linesdown
-                dec     V_Y
-                ldy     #0
-                lda     (V_LP),y
-                sta     V_X
-                inc     V_X
-                jsr     insertat
-                inc     V_Y
-                ldx     #1
-                stx     V_X
-                bne	jmpmain2
-
-cr:
-                ldy     #0
-                ldx     V_X
-                dex
-                txa
-                sta     (V_LP),y
-                jsr     insertat
-                inc     V_Y
-                ldx     #1
-                stx     V_X
-                bne	jmpmain2
-
 printline:
                 ldy     #PL_BASE
                 jsr     linepointer
-		ldy	#0
+                ldy     #0
                 lda     (PL_BASE),y
                 beq     pl_empty
-		sta	pl_cmp
-		inc	PL_BASE
+                sta     pl_cmp
+                inc     PL_BASE
 pl_loop:        lda     (PL_BASE),y
                 jsr     t80_chrout
                 iny

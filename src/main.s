@@ -5,7 +5,6 @@
 .include "text80.inc"
 .include "petscii_lc.inc"
 
-.import font_topaz_80col_petscii_western
 .import ed
 .import __ZPSAVE_LOAD__
 
@@ -97,12 +96,6 @@ spriteloop:	sta	vic_spriteset,x
 		; set graphics mode and clear screen
 		jsr	gfx_on
 
-		lda	#<font_topaz_80col_petscii_western
-		sta	T80_FONT_L
-		lda	#>font_topaz_80col_petscii_western
-		sta	T80_FONT_H
-		lda	#$e0
-		sta	T80_DRAWPAGE
 		lda	#0
 		sta	T80_ROW
 		sta	T80_COL
