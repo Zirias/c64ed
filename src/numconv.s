@@ -1,12 +1,15 @@
-.include "defs.inc"
-
-V_MASK_NIBBLE   = $14
+.include "text80.inc"
 
 .export numout
 .export numclear
-.export numberbuf
 .export numtostring
 .export stringtonum
+
+.exportzp numberbuf
+
+.segment "ZP": zeropage
+V_MASK_NIBBLE:	.res	1
+numberbuf:	.res	3
 
 .segment "INIT"
                 ldx     #$f0
@@ -19,7 +22,7 @@ numout:
                 ldx     #0
 no_loop:        lda     numberbuf,x
                 beq     no_skip
-                jsr     CHROUT
+                jsr     t80_chrout
 no_skip:        inx
                 cpx     #3
                 bne     no_loop
@@ -145,8 +148,4 @@ numclear:
                 sta     numberbuf+1
                 sta     numberbuf+2
 		rts
-
-.bss
-
-numberbuf:      .res    3               ; buffer for converting numbers
 

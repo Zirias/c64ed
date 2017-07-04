@@ -1,18 +1,29 @@
-.include "defs.inc"
-
 .export linepointer
 .export linesdown
 .export linesup
 .export buffer
 
+.exportzp V_R
+.exportzp V_Y
+.exportzp V_X
+.exportzp V_LP
+
+.segment "ZP": zeropage
+V_R:		.res	1
+V_Y:		.res	1
+V_X:		.res	1
+V_LP:		.res	2
+V_TLPDST:	.res	2
+V_TLPSRC:	.res	2
+lptemp:         .res    1               ; for calculating line pointer
+temp:		.res	1
+
 .code
 
 linepointer:
-                sta     lp_low_h
-                sta     lp_high_h
-                sty     lp_low_l
+                sty     lp_low
                 iny
-                sty     lp_high_l
+                sty     lp_high
                 dex
                 txa
                 and     #$7     ; lookup index for index values
@@ -33,44 +44,35 @@ lp_highdone:    sta     lptemp
                 and     #$3
                 adc     lptemp
                 adc     #>buffer
-lp_high_l       = *+1
-lp_high_h       = *+2
-                sta     $ffff
+lp_high         = *+1
+                sta     $ff
                 lda     index,y
                 and     #$f0
-lp_low_l        = *+1
-lp_low_h        = *+2       
-                sta     $ffff
+lp_low          = *+1       
+                sta     $ff
                 rts
 
 linesdown:
                 ldx     V_R
                 inx
                 stx     V_R
-ld_loop:        stx     ld_x
-                lda     #>cpl_dst
-                ldy     #<cpl_dst
+ld_loop:        stx     temp
+                ldy     #V_TLPDST
                 jsr     linepointer
-ld_x            = *+1
-                ldx     #$ff
-                dex
-                stx     ld_x2
+                dec     temp
+                ldx	temp
                 cpx     V_Y
                 beq     ld_currline
                 bmi     ld_currline
-                lda     #>cpl_src
-                ldy     #<cpl_src
+                ldy     #V_TLPSRC
                 jsr     linepointer
                 jsr     copyline
-ld_x2           = *+1
-                ldx     #$ff
+                ldx     temp
                 bpl     ld_loop
-ld_currline:    lda     cpl_dst
+ld_currline:    lda     V_TLPDST
                 sta     ld_tgt
-                sta     ld_cols
-                lda     cpl_dst+1
+                lda     V_TLPDST+1
                 sta     ld_tgt+1
-                sta     ld_cols+1
                 ldy     #0
                 lda     (V_LP),y
                 sta     ld_y
@@ -81,9 +83,10 @@ ld_currline:    lda     cpl_dst
                 lda     V_X
                 sta     (V_LP),y
                 pla
-                tax
 ld_cols         = *+1
-                stx     $ffff
+		ldy	#0
+                sta     (V_TLPDST),y
+                tax
                 beq     ld_emptyline
 ld_y            = *+1
                 ldy     #$ff
@@ -107,22 +110,20 @@ linesup:
                 cpx     V_R
                 beq     lu_done
                 inx
-                lda     #>lu_src
-                ldy     #<lu_src
+                ldy     #V_TLPSRC
                 jsr     linepointer
-                lda     lu_src
-                sta     lu_srccols
-                lda     lu_src+1
-                sta     lu_srccols+1
+                lda     V_TLPSRC
+                sta     lu_src
+                lda     V_TLPSRC+1
+                sta     lu_src+1
                 ldy     #0
-                lda     (V_LP),y
-lu_srccols      = *+1
-                ldx     $ffff
+                lda     (V_TLPSRC),y
                 beq     lu_emptyline
-                stx     lu_x
+		tax
+                lda     (V_LP),y
+                stx     temp
                 clc
-lu_x            = *+1
-                adc     #$ff
+                adc     temp
                 sta     (V_LP),y
                 tay
 lu_src          = *+1
@@ -133,48 +134,34 @@ lu_lineloop:    lda     $ffff,x
                 bne     lu_lineloop
 lu_emptyline:   ldx     V_Y
                 inx
+                stx     temp
 lu_loop:        cpx     V_R
                 beq     lu_decrows
-                stx     lu_x2
-                lda     #>cpl_dst
-                ldy     #<cpl_dst
+                ldy     #V_TLPDST
                 jsr     linepointer
-lu_x2           = *+1
-                ldx     #$ff
-                inx
-                stx     lu_x3
-                lda     #>cpl_src
-                ldy     #<cpl_src
+		inc	temp
+		ldx	temp
+                ldy     #V_TLPSRC
                 jsr     linepointer
                 jsr     copyline
-lu_x3           = *+1
-                ldx     #$ff
+                ldx     temp
                 bne     lu_loop
 lu_decrows:     dec     V_R
 lu_done:        rts
 
 copyline:
-                lda     cpl_src
-                sta     cpl_len
-                lda     cpl_src+1
-                sta     cpl_len+1
-cpl_len         = *+1
-                ldx     $ffff
-cpl_src         = *+1
-cpl_loop:       lda     $ffff,x
-cpl_dst         = *+1
-                sta     $ffff,x
-                dex
+		ldy	#0
+                lda     (V_TLPSRC),y
+		tay
+cpl_loop:       lda     (V_TLPSRC),y
+                sta     (V_TLPDST),y
+                dey
                 bpl     cpl_loop
                 rts
 
 .data
 
 index:          .byte   $00,$60,$c0,$21,$81,$e1,$42,$a2
-
-.bss
-
-lptemp:         .res    1               ; for calculating line pointer
 
 .segment "BUF"
 

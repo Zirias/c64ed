@@ -1,4 +1,7 @@
-.include "defs.inc"
+.include "numconv.inc"
+.include "buffer.inc"
+.include "text80.inc"
+.include "kbinput.inc"
 
 .export prompt
 .export readline
@@ -7,24 +10,23 @@
 .export getijabs
 .export line
 
-.import numout
-.import numclear
-.import numberbuf
-.import stringtonum
+.exportzp V_C
+.exportzp V_I
+.exportzp V_J
 
-V_CURSOR        = $cc   ; cursor on/off
-V_MASK_PRINT    = $15
-V_OFF_I         = $19
-V_OFF_J         = $20
+.segment "ZP": zeropage
+V_MASK_PRINT:	.res	1
+V_C:		.res	1
+V_I:		.res	1
+V_J:		.res	1
+V_OFF_I:	.res	1
+V_OFF_J:	.res	1
+GIJ_OFF:	.res	1
 
 .segment "INIT"
 
                 ldx     #$60
                 stx     V_MASK_PRINT
-                ldx     #$80
-                stx     $291            ; disable SHIFT+C=
-                ldx     #$17
-                stx     $d018           ; lowercase textmode
 
 .code
 
@@ -37,56 +39,51 @@ prompt:
                 cmp     V_X
                 bpl     numprompt
                 lda     #'e'
-                jsr     CHROUT
+                jsr     t80_chrout
                 lda     #'n'
-                jsr     CHROUT
+                jsr     t80_chrout
                 lda     #'d'
-                jsr     CHROUT
+                jsr     t80_chrout
                 bcc     promptend
 numprompt:      ldy     V_Y
                 jsr     numout
                 lda     #','
-                jsr     CHROUT
+                jsr     t80_chrout
                 ldy     V_X
                 jsr     numout
 promptend:      lda     #'>'
-                jsr     CHROUT
+                jsr     t80_chrout
                 lda     #' '
-                jmp     CHROUT
+                jmp     t80_chrout
 		; rts
 
 readline:
                 ldx     #0
                 stx     V_C
-                stx     V_CURSOR
-readinput:      jsr     GETIN
+readinput:      jsr     kb_in
                 beq     readinput
                 bit     V_MASK_PRINT
                 beq     ctrlinput
                 ldx     V_C
-                cpx     #$1e
+                cpx     #$50
                 beq     readinput
-                jsr     CHROUT
+                jsr     t80_chrout
                 sta     line,x
                 inx
                 stx     V_C
                 bpl     readinput
-ctrlinput:      cmp     #$d             ; return
+ctrlinput:      cmp     #KBC_ENTER
                 bne     ci_noreturn
+                jsr     t80_chrout
                 lda     #0
                 ldx     V_C
                 sta     line,x
-                inc     V_CURSOR
-                lda     #$20            ; hack to cleanup cursor
-                jsr     CHROUT
-                lda     #$d
-                jmp     CHROUT
-		; rts
-ci_noreturn:    cmp     #$14            ; "backspace"
+		rts
+ci_noreturn:    cmp     #KBC_BACKSPACE
                 bne     readinput
                 ldx     V_C
                 beq     readinput
-                jsr     CHROUT
+                jsr     t80_chrout
                 dex
                 stx     V_C
                 bpl     readinput
@@ -126,7 +123,7 @@ rn_nominus:     beq     rn_done
 rn_done:        rts
 
 getij:
-                stx     gij_off
+                stx     GIJ_OFF
                 ldy     #0
                 sty     V_OFF_I
                 sty     V_OFF_J
@@ -135,23 +132,20 @@ getij:
                 sty     V_J
                 lda     #V_OFF_I
                 jsr     readnumber
-gij_off         = *+1
-                cpx     #$ff
+                cpx     GIJ_OFF
                 beq     gij_comma
-                stx     gij_offc
+                stx     GIJ_OFF
                 jsr     stringtonum
                 sta     V_I
-gij_offc        = *+1
-                ldx     #$ff
+                ldx     GIJ_OFF
 gij_comma:      lda     line,x
                 cmp     #','
                 bne     gij_done
                 inx
-                stx     gij_offj
+                stx     GIJ_OFF
                 lda     #V_OFF_J
                 jsr     readnumber
-gij_offj        = *+1
-                cpx     #$ff
+                cpx     GIJ_OFF
                 beq     gij_done
                 jsr     stringtonum
                 sta     V_J
@@ -207,5 +201,5 @@ gija_done:      rts
 
 .bss
 
-line:           .res    $20             ; 32 character input buffer
+line:           .res    $52             ; 81 character input buffer
 

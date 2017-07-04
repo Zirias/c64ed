@@ -1,24 +1,19 @@
-.include "defs.inc"
+.include "buffer.inc"
+.include "cmdline.inc"
+.include "text80.inc"
+.include "petscii_lc.inc"
 
-.import linepointer
-.import linesdown
-.import linesup
-.import buffer
+.export ed
 
-.import prompt
-.import readline
-.import readnumber
-.import getij
-.import getijabs
-.import line
+.segment "ZP": zeropage
 
-.segment "LDADDR"
-                .word   $c000
+ARGLEN:		.res 1		; length of argument to command
+PL_BASE:	.res 2
+INST_BASE:	.res 2
 
-.segment "INIT"
+.code
 
-                ldx     #$36
-                stx     $1              ; disable BASIC rom
+ed:
                 ldx     #1
                 stx     V_X
                 stx     V_Y
@@ -26,10 +21,7 @@
                 stx     buffer
                 stx     V_R
 
-.segment "MAIN"
-
 mainloop:       ldx     V_Y
-                lda     #0
                 ldy     #V_LP
                 jsr     linepointer
                 jsr     prompt
@@ -41,7 +33,7 @@ mainloop:       ldx     V_Y
                 dex
                 bpl     pl_cntplus
                 ldx     #0
-pl_cntplus:     stx     arglen
+pl_cntplus:     stx     ARGLEN
                 lda     line
                 cmp     #'e'
                 beq     cmd_e
@@ -65,9 +57,12 @@ pl_cntplus:     stx     arglen
                 beq     cmd_d
                 cmp     #'j'
                 beq     cmd_j
+		cmp	#'q'
+		bne	cmd_focus
+		rts
 
                 ; focus position command:
-                ldx     #0
+cmd_focus:      ldx     #0
                 jsr     getijabs
                 lda     V_I
 pl_pos:         ldx     V_R
@@ -76,7 +71,6 @@ pl_pos:         ldx     V_R
                 beq     pl_noypos
                 sta     V_Y
                 tax
-                lda     #0
                 ldy     #V_LP
                 jsr     linepointer
 pl_noypos:      ldy     #0
@@ -93,7 +87,7 @@ pl_xpos:        jsr     adjustrange
 
 cmd_enter:
                 jsr     linesdown
-                jmp     mainloop
+                bpl     mainloop
 
 cmd_e:
                 lda     #0
@@ -121,7 +115,6 @@ cmd_A:
                 inx
                 stx     V_R
                 stx     V_Y
-                lda     #0
                 ldy     #V_LP
                 jsr     linepointer
                 lda     #0
@@ -157,7 +150,7 @@ cp:
                 dex
                 stx     V_J
                 ldx     #2
-                lda     arglen
+                lda     ARGLEN
                 beq     cp_noargs
                 jsr     getij
 cp_noargs:      lda     V_I
@@ -195,6 +188,10 @@ cd:
                 iny
                 sty     V_X
 cd_linesup:     jsr     linesup
+		ldy	#1
+		cpy	V_Y
+		bmi	cd_main
+		sty	V_Y
 cd_main:        jmp     mainloop
 cd_clearline:   tya
                 sta     (V_LP),y
@@ -220,10 +217,10 @@ cL_loop:        inx
                 cpx     V_Y
                 beq     cL_currline
                 lda     #' '
-                jsr     CHROUT
+                jsr     t80_chrout
                 bne     cL_lineout
 cL_currline:    lda     #'>'
-                jsr     CHROUT
+                jsr     t80_chrout
 cL_lineout:     jsr     printline
 cL_y            = *+1
                 ldy     #$ff
@@ -235,13 +232,13 @@ cL_x            = *+1
                 bne     cL_loop
 cL_colmark:     lda     #' '
                 ldx     V_X
-cL_colloop:     jsr     CHROUT
+cL_colloop:     jsr     t80_chrout
                 dex
                 bne     cL_colloop
-                lda     #'^'
-                jsr     CHROUT
+                lda     #$26		; ^
+                jsr     t80_chrout
                 lda     #$d
-                jsr     CHROUT
+                jsr     t80_chrout
 jmpmain2:       jmp     mainloop
 
 ci:
@@ -255,7 +252,7 @@ ci:
                 inc     V_Y
                 ldx     #1
                 stx     V_X
-                jmp     mainloop
+                bne	jmpmain2
 
 cr:
                 ldy     #0
@@ -267,79 +264,66 @@ cr:
                 inc     V_Y
                 ldx     #1
                 stx     V_X
-                jmp     mainloop
+                bne	jmpmain2
 
 printline:
-                lda     #>pl_base
-                ldy     #<pl_base
+                ldy     #PL_BASE
                 jsr     linepointer
-                ldx     pl_base
-                inx
-                stx     pl_read
-                ldx     pl_base+1
-                stx     pl_read+1
-pl_base         = *+1
-                ldx     $ffff
+		ldy	#0
+                lda     (PL_BASE),y
                 beq     pl_empty
-                stx     pl_cmp
-                ldy     #0
-pl_read         = *+1
-pl_loop:        lda     $ffff,y
-                jsr     CHROUT
+		sta	pl_cmp
+		inc	PL_BASE
+pl_loop:        lda     (PL_BASE),y
+                jsr     t80_chrout
                 iny
 pl_cmp          = *+1
                 cpy     #$ff
                 bne     pl_loop
 pl_empty:       lda     #$d
-                jmp     CHROUT
+                jmp     t80_chrout
                 ; rts
 
 insertat:
                 lda     V_LP
                 clc
                 adc     V_X
-                sta     ia_mvsrcbase
-                sta     ia_instgtbase
+                sta     PL_BASE
                 lda     V_LP+1
                 adc     #0
-                sta     ia_mvsrcbase+1
-                sta     ia_instgtbase+1
-                lda     ia_mvsrcbase
-                adc     arglen
-                sta     ia_mvdstbase
-                lda     ia_mvsrcbase+1
+                sta     PL_BASE+1
+                lda     PL_BASE
+                adc     ARGLEN
+                sta     INST_BASE
+                lda     PL_BASE+1
                 adc     #0
-                sta     ia_mvdstbase+1
+                sta     INST_BASE+1
                 ldy     #0
                 lda     (V_LP),y
                 sec
                 sbc     V_X
                 bmi     ia_nomove
-                tax
-                clc
-ia_mvsrcbase    = *+1
-ia_moveloop:    lda     $ffff,x
-ia_mvdstbase    = *+1
-                sta     $ffff,x
-                dex
+                tay
+ia_moveloop:    lda     (PL_BASE),y
+                sta     (INST_BASE),y
+                dey
                 bpl     ia_moveloop
-ia_nomove:      ldx     arglen
-                dex
+ia_nomove:      ldy     ARGLEN
+                dey
                 bpl     ia_insert
                 rts
-ia_insert:      lda     line+2,x
-ia_instgtbase   = *+1
-                sta     $ffff,x
-                dex
+ia_insert:      lda     line+2,y
+                sta     (PL_BASE),y
+                dey
                 bpl     ia_insert
                 ldy     #0
                 lda     (V_LP),y
                 clc
-                adc     arglen
+                adc     ARGLEN
                 sta     (V_LP),y
                 lda     V_X
                 clc
-                adc     arglen
+                adc     ARGLEN
                 sta     V_X
                 rts
 
@@ -354,8 +338,4 @@ ajr_doadjust:   cpx     #$ff
                 bpl     ajr_done
 ajr_cap:        txa
 ajr_done:       rts
-
-.bss
-
-arglen:         .res    1               ; length of argument to command
 
