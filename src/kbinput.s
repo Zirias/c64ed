@@ -48,7 +48,7 @@ keymap_us:
                 .byte 'V','U','H','B','(','G','Y', 39
                 .byte 'N','O','K','M','0','J','I',')'
                 .byte '<','@','[','>','-','L','P','+'
-                .byte '?','^','=', 0, KBC_CLEAR,';','*',124
+                .byte '?','^','=', 0, KBC_CLEAR,']','*',124
                 .byte KBC_RUN,'Q', KBC_CBM1,' ','"', 0, 0,'!'
 
 ; vim: et:si:ts=8:sts=8:sw=8
