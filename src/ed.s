@@ -5,7 +5,7 @@
 
 .export ed
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 
 ARGLEN:         .res 1          ; length of argument to command
 PL_BASE:        .res 2

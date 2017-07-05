@@ -11,7 +11,7 @@
 .segment "LDADDR"
                 .word   $c000
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 border_save:    .res	1
 bg_save:        .res	1
 memctl_save:    .res	1

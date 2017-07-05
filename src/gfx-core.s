@@ -10,7 +10,7 @@
 .export gfx_setcolor
 .export gfx_clear
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 TMP_0:          .res    1
 TMP_1:          .res    1
 

@@ -13,21 +13,20 @@
 kb_in:
                 jsr     kb_get
                 clv
-                bcs     kbi_out
+                bcs     kbi_done
                 tax
-                and     #%10000000
-                beq     noctrl
+                bpl     noctrl
                 bit     kbi_ctrl_ind
-noctrl:         txa
-                and     #%01111111
+noctrl:         and     #%01111111
                 tax
                 lda     keymap_us,x
-                bvs     kbi_out
-                cmp     #$20
-                clc
-                bpl     kbi_out
+                bvc     kbi_checkctc
+                ora     #%10000000
+kbi_checkctc:   cmp     #$1f
+                bcs     kbi_out
                 bit     kbi_ctrl_ind
-kbi_out:        rts
+kbi_out:        clc
+kbi_done:       rts
                 
 .data
 

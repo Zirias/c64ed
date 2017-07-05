@@ -7,13 +7,9 @@
 
 .exportzp numberbuf
 
-.segment "ZP": zeropage
-V_MASK_NIBBLE:	.res	1
+.segment "ZPHIGH": zeropage
 numberbuf:	.res	3
-
-.segment "INIT"
-                ldx     #$f0
-                stx     V_MASK_NIBBLE
+number:		.res	1
 
 .code
 
@@ -29,118 +25,86 @@ no_skip:        inx
                 rts
 
 numtostring:
+		sta	number
 		jsr	numclear
                 ldx     #8
-nts_bcdloop:    lda     numberbuf+2
+nts_bcdloop:	ldy	#2
+nts_addloop:    lda     numberbuf,y
                 cmp     #5
-                bmi     nts_noadd0
+                bmi     nts_noadd
                 adc     #2
-                sta     numberbuf+2
-nts_noadd0:     lda     numberbuf+1
-                cmp     #5
-                bmi     nts_noadd1
-                adc     #2
-                sta     numberbuf+1
-nts_noadd1:     lda     numberbuf
-                cmp     #5
-                bmi     nts_noadd2
-                adc     #2
-                sta     numberbuf
-nts_noadd2:     tya
+                sta     numberbuf,y
+nts_noadd:	dey
+		bpl	nts_addloop
+nts_noadd2:     ldy	#2
+		lda	number
                 asl     a
-                tay
-                rol     numberbuf+2
-                lda     numberbuf+2
-                clc
-                bit     V_MASK_NIBBLE
-                beq     nts_rol2
+                sta	number
+nts_rolloop:    lda     numberbuf,y
+		rol	a
+		cmp	#$10		; C=1 when bit 4 is set
                 and     #$f
-                sta     numberbuf+2
-                sec
-nts_rol2:       rol     numberbuf+1
-                lda     numberbuf+1
-                clc
-                bit     V_MASK_NIBBLE
-                beq     nts_rol3
-                and     #$f
-                sta     numberbuf+1
-                sec
-nts_rol3:       rol     numberbuf
+		sta     numberbuf,y
+nts_rolnext:	dey
+		bpl	nts_rolloop
                 dex
                 bne     nts_bcdloop
 
                 lda     numberbuf+2
                 ora     #$30
                 sta     numberbuf+2
-                lda     numberbuf+1
+		ldy	#1
+nts_tochrloop:  lda     numberbuf,y
                 beq     nts_done
                 ora     #$30
-                sta     numberbuf+1
-                lda     numberbuf
-                beq     nts_done
-                ora     #$30
-                sta     numberbuf
+                sta     numberbuf,y
+		dey
+		bpl	nts_tochrloop
 nts_done:       rts
 
 stringtonum:
 		lda	numberbuf+2
-		bne	stn_check0
+		bne	stn_start
 		lda	numberbuf+1
 		sta	numberbuf+2
 		lda	numberbuf
 		sta	numberbuf+1
 		lda	#0
 		sta	numberbuf
-		lda	numberbuf+2
-		bne	stn_check0
-		lda	numberbuf+1
-		sta	numberbuf+2
-		lda	#0
-		sta	numberbuf+1
-		lda	numberbuf+2
-stn_check0:	beq	stn_done
+		beq	stringtonum
+stn_start:	ldy	#2
+stn_tonumloop:	lda	numberbuf,y
+		beq	stn_skip0
 		and	#$cf
-		sta	numberbuf+2
-		lda	numberbuf+1
-		and	#$cf
-		sta	numberbuf+1
-		lda	numberbuf
-		and	#$cf
-		sta	numberbuf
-		ldy	#0
+		sta	numberbuf,y
+stn_skip0:	dey
+		bpl	stn_tonumloop
+
 		ldx	#8
-stn_loop:	lsr	numberbuf
-		bcc	stn_noc0
-		lda	numberbuf+1
+stn_loop:	ldy	#$7d
+		clc
+stn_rorloop:	lda	numberbuf-$7d,y
+		bcc	stn_skipbit
 		ora	#$10
-		sta	numberbuf+1
-stn_noc0:	lsr	numberbuf+1
-		bcc	stn_noc1
-		lda	numberbuf+2
-		ora	#$10
-		sta	numberbuf+2
-stn_noc1:	lsr	numberbuf+2
-		tya
+stn_skipbit:	lsr	a
+		sta	numberbuf-$7d,y
+		iny
+		bpl	stn_rorloop
+		lda	number
 		ror	a
-		tay
 		dex
 		bne	stn_sub
 stn_done:	rts
-stn_sub:	lda	numberbuf+2
+stn_sub:	sta	number
+		ldy	#2
+stn_subloop:	lda	numberbuf,y
 		cmp	#8
-		bmi	stn_nosub0
+		bmi	stn_nosub
 		sbc	#3
-		sta	numberbuf+2
-stn_nosub0:	lda	numberbuf+1
-		cmp	#8
-		bmi	stn_nosub1
-		sbc	#3
-		sta	numberbuf+1
-stn_nosub1:	lda	numberbuf
-		cmp	#8
+		sta	numberbuf,y
+stn_nosub:	dey
+		bpl	stn_subloop
 		bmi	stn_loop
-		sta	numberbuf
-		bpl	stn_loop
 
 numclear:
                 lda     #0

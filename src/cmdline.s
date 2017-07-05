@@ -14,7 +14,7 @@
 .exportzp V_I
 .exportzp V_J
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 V_C:		.res	1
 V_I:		.res	1
 V_J:		.res	1
@@ -39,11 +39,11 @@ prompt:
                 lda     #'d'
                 jsr     t80_chrout
                 bcc     promptend
-numprompt:      ldy     V_Y
+numprompt:      lda     V_Y
                 jsr     numout
                 lda     #','
                 jsr     t80_chrout
-                ldy     V_X
+                lda     V_X
                 jsr     numout
 promptend:      lda     #'>'
                 jsr     t80_chrout

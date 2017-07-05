@@ -26,7 +26,7 @@
 .export kb_get
 .export kb_check
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 
 buffer:         .res 16
 

@@ -8,7 +8,7 @@
 .exportzp V_X
 .exportzp V_LP
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 V_R:		.res	1
 V_Y:		.res	1
 V_X:		.res	1

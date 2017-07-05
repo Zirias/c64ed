@@ -6,7 +6,7 @@
 .export empty_isr
 .export show_cursor
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 
 SAVE_A:		.res 1
 SAVE_X:		.res 1

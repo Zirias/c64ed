@@ -11,7 +11,7 @@
 .export t80_putc
 .export t80_chrout
 
-.segment "ZP": zeropage
+.segment "ZPLOW": zeropage
 T80_ROW:        .res 1
 T80_COL:        .res 1
 PUTS_L:         .res 1
