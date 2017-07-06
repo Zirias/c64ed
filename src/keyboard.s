@@ -29,6 +29,8 @@
 .segment "ZPLOW": zeropage
 
 buffer:         .res 16
+bufrd:          .res 1
+bufwr:          .res 1
 
 tmp1:           .res 1
 tmp2:           .res 1
@@ -39,9 +41,10 @@ repeatfreq:     .res 1
 
 modmask:        .res 1
 
-.data
-bufrd:          .byte $f
-bufwr:          .byte $f
+.segment "INIT"
+                ldx     #$f
+                stx     bufrd
+                stx     bufwr
 
 .code
 
