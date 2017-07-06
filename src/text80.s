@@ -10,6 +10,7 @@
 
 .export t80_putc
 .export t80_chrout
+.export t80_setcrsr
 
 .segment "ZPLOW": zeropage
 T80_ROW:        .res 1
@@ -115,6 +116,11 @@ scr_nextsrc:    cpx     #1
                 inc     CHAR_H
                 bcs     scr_loop
 scr_done:       rts
+
+t80_setcrsr:
+                pha
+                sty     savey
+                jmp     cursorpos
 
 t80_chrout:
                 pha

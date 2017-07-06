@@ -172,9 +172,9 @@ kbc_checknew:   lda     tmp1
                 cmp     tmp2
                 beq     kbc_checkrepeat
                 sta     tmp2
-                ldx     #40
+                ldx     #25
                 stx     repeatwait
-                ldx     #2
+                ldx     #1
                 stx     repeatfreq
 kbc_repeatok:   ora     modmask
                 ldx     bufwr
@@ -212,7 +212,7 @@ kbc_dorepeat:   ldx     repeatfreq
                 dex
                 stx     repeatfreq
                 rts
-kbcr_next:      ldx     #2
+kbcr_next:      ldx     #1
                 stx     repeatfreq
                 jmp     kbc_repeatok
 

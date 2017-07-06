@@ -8,19 +8,28 @@
 .export readnumber
 .export getij
 .export getijabs
-.export line
 
+.exportzp line
 .exportzp V_C
 .exportzp V_I
 .exportzp V_J
 
 .segment "ZPLOW": zeropage
-V_C:		.res	1
-V_I:		.res	1
-V_J:		.res	1
-V_OFF_I:	.res	1
-V_OFF_J:	.res	1
-GIJ_OFF:	.res	1
+V_C:            .res    1
+V_P:            .res    1
+V_I:            .res    1
+V_J:            .res    1
+V_OFF_I:        .res    1
+V_OFF_J:        .res    1
+GIJ_OFF:        .res    1
+RL_ROWTMP:      .res    1
+RL_COLTMP:      .res    1
+RL_BASECOL:     .res    1
+RL_BASEROW:     .res    1
+RL_DONE:        .res    1
+
+.segment "ZPHIGH": zeropage
+line:           .res    $51             ; 81 character input buffer
 
 .code
 
@@ -49,37 +58,145 @@ promptend:      lda     #'>'
                 jsr     t80_chrout
                 lda     #' '
                 jmp     t80_chrout
-		; rts
+                ; rts
 
 readline:
-                ldx     #0
-                stx     V_C
-readinput:      jsr     kb_in
+                ldx     T80_COL
+                stx     RL_BASECOL
+                ldx     T80_ROW
+                stx     RL_BASEROW
+                ldy     #0
+                sty     V_C
+                sty     V_P
+                sty     RL_DONE
+readinput:      ldy     RL_DONE
+                beq     rl_in
+                lda     #KBC_ENTER
+                jsr     t80_chrout
+                rts
+rl_in:          jsr     kb_in
                 bcs     readinput
                 bvs     ctrlinput
-                ldx     V_C
-                cpx     #$50
+
+                ; insert
+                ldy     V_C
+                cpy     #$50
                 beq     readinput
+rl_instloop:    cpy     V_P
+                beq     rl_inst
+                ldx     line-1,y
+                stx     line,y
+                dey
+                bpl     rl_instloop
+
+rl_inst:        jsr     t80_chrout
+                ldx     T80_ROW
+                stx     RL_ROWTMP
+                ldx     T80_COL
+                stx     RL_COLTMP
+                bne     rl_noscr0
+                ldx     T80_ROW
+                cpx     RL_BASEROW
+                bne     rl_noscr0
+                dec     RL_BASEROW
+rl_noscr0:      sta     line,y
+                iny
+                sty     V_P
+                inc     V_C
+rl_instoutloop: cpy     V_C
+                beq     rl_instdone
+                lda     line,y
                 jsr     t80_chrout
-                sta     line,x
-                inx
-                stx     V_C
+                lda     T80_COL
+                bne     rl_noscr
+                lda     #24
+                cmp     RL_ROWTMP
+                bne     rl_noscr
+                cmp     T80_ROW
+                bne     rl_noscr
+                dec     RL_ROWTMP
+                dec     RL_BASEROW
+rl_noscr:       iny
+                bpl     rl_instoutloop
+rl_instdone:    ldx     RL_ROWTMP
+                stx     T80_ROW
+                ldx     RL_COLTMP
+                stx     T80_COL
+                jsr     t80_setcrsr
                 bpl     readinput
+
 ctrlinput:      cmp     #KBC_ENTER
                 bne     ci_noreturn
-                jsr     t80_chrout
-                lda     #0
-                ldx     V_C
-                sta     line,x
-		rts
-ci_noreturn:    cmp     #KBC_BACKSPACE
-                bne     readinput
-                ldx     V_C
+                inc     RL_DONE
+                bne     ci_end
+ci_noreturn:    cmp     #KBC_RIGHT
+                bne     ci_noright
+                ldx     V_P
+                cpx     V_C
                 beq     readinput
+                inc     V_P
+                bpl     rl_adjpos
+ci_noright:     cmp     #KBC_LEFT
+                bne     ci_noleft
+                ldx     V_P
+                beq     rl_jmpback1
+                dec     V_P
+                bpl     rl_adjpos
+ci_noleft:      cmp     #KBC_HOME
+                bne     ci_nopos1
+                ldx     #0
+                stx     V_P
+                bpl     rl_adjpos
+ci_nopos1:      cmp     #KBC_CLEAR
+                bne     ci_noend
+ci_end:         ldx     V_C
+                stx     V_P
+rl_adjpos:      ldx     RL_BASEROW
+                stx     T80_ROW
+                clc
+                lda     RL_BASECOL
+                adc     V_P
+                cmp     #80
+                sta     T80_COL
+                bcc     rlap_setcrsr
+                sbc     #80
+                sta     T80_COL
+                inc     T80_ROW
+rlap_setcrsr:   jsr     t80_setcrsr
+rl_jmpback1:    jmp     readinput
+ci_noend:       cmp     #KBC_BACKSPACE
+                bne     rl_jmpback1
+                ldy     V_P
+                beq     rl_jmpback1
+                dey
+                dec     V_C
+                sty     V_P
+bs_mvloop:      cpy     V_C
+                beq     bs_mvdone
+                ldx     line+1,y
+                stx     line,y
+                iny
+                bpl     bs_mvloop
+bs_mvdone:      jsr     t80_chrout
+                ldx     T80_ROW
+                stx     RL_ROWTMP
+                ldx     T80_COL
+                stx     RL_COLTMP
+                ldy     V_P
+bs_outloop:     cpy     V_C
+                beq     bs_done
+                lda     line,y
                 jsr     t80_chrout
-                dex
-                stx     V_C
-                bpl     readinput
+                iny
+                bpl     bs_outloop
+bs_done:        lda     #' '
+                jsr     t80_chrout
+                ldx     RL_ROWTMP
+                stx     T80_ROW
+                ldx     RL_COLTMP
+                stx     T80_COL
+                jsr     t80_setcrsr
+                jmp     readinput
 
 readnumber:
                 sta     rn_offdst1
@@ -191,8 +308,4 @@ gija_plusx:     lda     V_X
                 lda     #0
                 sta     V_J
 gija_done:      rts
-
-.bss
-
-line:           .res    $52             ; 81 character input buffer
 
