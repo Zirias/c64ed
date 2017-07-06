@@ -58,13 +58,17 @@ gfx_clear:
                 sta     TMP_0
                 ldx     #>vic_bitmap
                 stx     TMP_1
-                ldx     #$20
+                ldx     #$1f
 cl_loop:        sta     (TMP_0),y
                 iny
                 bne     cl_loop
                 inc     TMP_1
                 dex
                 bne     cl_loop
+                ldy     #$3f
+cl_last:        sta     (TMP_0),y
+                dey
+                bpl     cl_last
                 rts
 
 ; vim: et:si:ts=8:sts=8:sw=8

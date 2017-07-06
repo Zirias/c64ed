@@ -85,7 +85,7 @@ thispage2:      sta     PUTS_L
                 rts
 
 t80_scroll:
-                ldy     #(vic_bitmap >> 8)
+                ldy     #>vic_bitmap
                 sty     PUTS_H
                 iny
                 sty     CHAR_H
@@ -94,9 +94,12 @@ t80_scroll:
                 ldy     #0
                 sty     PUTS_L
                 ldx     #50
-scr_loop:       ldy     #0
-scr_inner:      lda     (CHAR_L),y
-                sta     (PUTS_L),y
+scr_loop:       lda     #0
+                tay
+scr_inner:      cpx     #3
+                bmi     scr_noload
+                lda     (CHAR_L),y
+scr_noload:     sta     (PUTS_L),y
                 iny
                 cpy     #$a0
                 bne     scr_inner
@@ -107,9 +110,8 @@ scr_inner:      lda     (CHAR_L),y
                 sta     PUTS_L
                 bcc     scr_nextsrc
                 inc     PUTS_H
-scr_nextsrc:    cpx     #1
-                beq     scr_loop
-                lda     #$9f
+                clc
+scr_nextsrc:    lda     #$a0
                 adc     CHAR_L
                 sta     CHAR_L
                 bcc     scr_loop

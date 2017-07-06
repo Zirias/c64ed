@@ -41,24 +41,21 @@ prompt:
                 lda     (V_LP),y
                 cmp     V_X
                 bpl     numprompt
-                lda     #'e'
+                ldx     #0
+pr_endloop:     lda     prompt_end,x
                 jsr     t80_chrout
-                lda     #'n'
-                jsr     t80_chrout
-                lda     #'d'
-                jsr     t80_chrout
-                bcc     promptend
+                inx
+                cpx     #5
+                bne     pr_endloop
+                rts
 numprompt:      lda     V_Y
                 jsr     numout
                 lda     #','
                 jsr     t80_chrout
                 lda     V_X
                 jsr     numout
-promptend:      lda     #'>'
-                jsr     t80_chrout
-                lda     #' '
-                jmp     t80_chrout
-                ; rts
+promptend:      ldx     #3
+                bne     pr_endloop
 
 readline:
                 ldx     T80_COL
@@ -111,8 +108,6 @@ rl_instoutloop: cpy     V_C
                 bne     rl_noscr
                 lda     #24
                 cmp     RL_ROWTMP
-                bne     rl_noscr
-                cmp     T80_ROW
                 bne     rl_noscr
                 dec     RL_ROWTMP
                 dec     RL_BASEROW
@@ -308,4 +303,8 @@ gija_plusx:     lda     V_X
                 lda     #0
                 sta     V_J
 gija_done:      rts
+
+.data
+
+prompt_end:     .byte   "end> "
 
