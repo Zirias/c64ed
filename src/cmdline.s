@@ -36,24 +36,21 @@ prompt:
                 lda     (V_LP),y
                 cmp     V_X
                 bpl     numprompt
-                lda     #'e'
+                ldx     #0
+pr_endloop:     lda     prompt_end,x
                 jsr     CHROUT
-                lda     #'n'
-                jsr     CHROUT
-                lda     #'d'
-                jsr     CHROUT
-                bcc     promptend
-numprompt:      ldy     V_Y
+                inx
+                cpx     #5
+                bne     pr_endloop
+                rts
+numprompt:      lda     V_Y
                 jsr     numout
                 lda     #','
                 jsr     CHROUT
-                ldy     V_X
+                lda     V_X
                 jsr     numout
-promptend:      lda     #'>'
-                jsr     CHROUT
-                lda     #' '
-                jmp     CHROUT
-		; rts
+promptend:      ldx     #3
+                bne     pr_endloop
 
 readline:
                 ldx     #0
@@ -204,6 +201,10 @@ gija_plusx:     lda     V_X
                 lda     #0
                 sta     V_J
 gija_done:      rts
+
+.data
+
+prompt_end:	.byte	"end> "
 
 .bss
 
